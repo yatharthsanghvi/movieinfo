@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            transition: background-image 0.5s ease;
+            background-size: cover;
+            height: 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        .transparent-card {
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        /* Responsive Image Styles */
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Small devices (portrait phones, less than 576px) */
+        @media (max-width: 575.98px) {
+            .container {
+                padding: 10px;
+                margin: 0 5px;
+            }
+            .transparent-card {
+                font-size: 14px;
+            }
+            .card-title {
+                font-size: 1.2rem;
+            }
+            .card-text {
+                font-size: 1rem;
+            }
+        }
+        /* Medium devices (landscape phones, tablets, 576px and up) */
+        @media (min-width: 576px) and (max-width: 767.98px) {
+            .container {
+                padding: 20px;
+            }
+            .transparent-card {
+                font-size: 16px;
+            }
+            .card-title {
+                font-size: 1.4rem;
+            }
+            .card-text {
+                font-size: 1.2rem;
+            }
+        }
+        /* Large devices (tablets, 768px and up) */
+        @media (min-width: 768px) and (max-width: 991.98px) {
+            .container {
+                padding: 30px;
+            }
+            .transparent-card {
+                font-size: 18px;
+            }
+            .card-title {
+                font-size: 1.6rem;
+            }
+            .card-text {
+                font-size: 1.4rem;
+            }
+        }
+        /* Extra large devices (desktops, 992px and up) */
+        @media (min-width: 992px) and (max-width: 1199.98px) {
+            .container {
+                padding: 40px;
+            }
+            .transparent-card {
+                font-size: 20px;
+            }
+            .card-title {
+                font-size: 1.8rem;
+            }
+            .card-text {
+                font-size: 1.6rem;
+            }
+        }
+        /* Extra extra large devices (large desktops, 1200px and up) */
+        @media (min-width: 1200px) {
+            .container {
+                padding: 50px;
+            }
+            .transparent-card {
+                font-size: 22px;
+            }
+            .card-title {
+                font-size: 2rem;
+            }
+            .card-text {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5 transparent-card">
+        <h1 class="text-center">OMDb Movie Search</h1>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="movie-input"><b>Enter Movie Title (with Release Year):</b></label>
+                <input type="text" id="movie-input" class="form-control" placeholder="e.g., Inception (2010)">
+            </div>
+            <div class="col-md-6 mb-3">
+                <label for="actor-input"><b>Enter Actor Name:</b></label>
+                <input type="text" id="actor-input" class="form-control" placeholder="e.g., Leonardo DiCaprio">
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <button onclick="searchMovie()" class="btn btn-success btn-block">Search</button><br>
+            </div>
+        </div>
+        <div id="movie-results" class="mt-4">
+            <!-- Movie cards will be dynamically inserted here -->
+        </div>
+    </div>
+
+    <!-- Add jQuery and Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>    
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        function searchMovie() {
+            if (isRequestLimitReached()) {
+                alert('Request limit reached for today. Please try again tomorrow.');
+                return;
+            }
+
+            const movieInput = document.getElementById('movie-input').value;
+            const actorInput = document.getElementById('actor-input').value;
+            const resultsContainer = document.getElementById('movie-results');
+            resultsContainer.innerHTML = '';
+            const movieYearMatch = movieInput.match(/\b\d{4}\b/);
+            let movieYear = '';
+            if (movieYearMatch) {
+                movieYear = movieYearMatch[0];
+            }
+            const actorMatch = actorInput.match(/\b[A-Za-z\s]+\b/);
+            let actor = '';
+            if (actorMatch) {
+                actor = actorMatch[0].trim();
+            }
+            const movieSearchTerm = movieInput.replace(/\b\d{4}\b/, '').trim();
+            const apiKey = 'd196d57b'; // Replace with your actual API key
+            let apiURL = `https://www.omdbapi.com/?apikey=${apiKey}&s=${movieSearchTerm}`;
+            if (actor && actor.trim() !== '') {
+                apiURL += `&actors=${actor}`;
+            }
+            if (movieYear) {
+                apiURL += `&y=${movieYear}`;
+            }
+            console.log('API URL:', apiURL);
+            fetch(apiURL)
+            .then(response => response.json())
+            .then(data => {
+                if (data.Response === 'True') {
+                    if (!document.body.style.backgroundImage) {
+                        document.body.style.backgroundImage = `url('${data.Search[0].Poster}')`;
+                    }
+                    data.Search.forEach(movie => {
+                        fetch(`https://www.omdbapi.com/?apikey=${apiKey}&i=${movie.imdbID}`)
+                            .then(response => response.json())
+                            .then(movieDetails => {
+                                if (
+                                    movieDetails.Title.toLowerCase() === movieSearchTerm.toLowerCase() &&
+                                    (!movieYear || movieDetails.Year === movieYear) &&
+                                    (!actor || isActorInMainCast(actor, movieDetails.Actors))
+                                ) {
+                                    const movieCard = createMovieCard(movieDetails);
+                                    resultsContainer.appendChild(movieCard);
+                                }
+                            })
+                            .catch(error => console.error('Error fetching movie details:', error));
+                    });
+                } else {
+                    resultsContainer.innerHTML = '<p>No results found.</p>';
+                }
+            })
+            .catch(error => console.error('Error fetching data:', error));
+            console.log("searching for movie");
+            updateRequestCount();
+        }
+
+        function isRequestLimitReached() {
+            const today = new Date().toISOString().slice(0, 10); // Get today's date in YYYY-MM-DD format
+            const requestCount = localStorage.getItem(today) || 0;
+            return requestCount >= 300;
+        }
+
+        function updateRequestCount() {
+            const today = new Date().toISOString().slice(0, 10); // Get today's date in YYYY-MM-DD format
+            let requestCount = localStorage.getItem(today) || 0;
+            requestCount = parseInt(requestCount) + 1;
+            localStorage.setItem(today, requestCount);
+        }
+
+        function isActorInMainCast(actor, mainCast) {
+            const lowercasedMainCast = mainCast.toLowerCase();
+            return lowercasedMainCast.includes(actor.toLowerCase());
+        }
+
+        function createMovieCard(movie) {
+            const card = document.createElement('div');
+            card.className = 'card mb-3 bg-transparent border-0';
+            card.style.maxWidth = '1000px';
+
+            const row = document.createElement('div');
+            row.className = 'row no-gutters';
+
+            const colBody = document.createElement('div');
+            colBody.className = 'col-md-12';
+
+            const body = document.createElement('div');
+            body.className = 'card-body';
+
+            // Title before image
+            body.innerHTML = `
+                <h3 class="card-title"><strong>${movie.Title} (${movie.Year})</strong></h3>
+            `;
+
+            // Row for the poster
+            const rowImg = document.createElement('div');
+            rowImg.className = 'col-md-4'; // Adjust the size of the image column
+            const img = document.createElement('img');
+            img.src = movie.Poster;
+            img.className = 'card-img';
+            img.alt = `${movie.Title}, ${movie.Year} poster`;
+            rowImg.appendChild(img);
+
+            body.appendChild(rowImg);
+
+            // Rest of the movie details
+            body.innerHTML += `
+                <br><p class="card-text" style="font-size: 1.2rem"; ><strong>Genre:</strong> ${movie.Genre}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Director:</strong> ${movie.Director}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Writer:</strong> ${movie.Writer}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Awards:</strong> ${movie.Awards}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Actors & Actresses:</strong> ${movie.Actors}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Plot:</strong> ${movie.Plot}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Screen Time:</strong> ${movie.Runtime}</p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Trailer:</strong> <a href="${createYouTubeLink(movie.Title, movie.Year)}" target="_blank">Watch Trailer</a></p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>Full Movie:</strong> <a href="${createFYouTubeLink(movie.Title, movie.Year)}" target="_blank">Watch Movie</a></p>
+                <p class="card-text" style="font-size: 1.2rem"; ><strong>More Details:</strong> <a href="movie_detail.html?imdbID=${movie.imdbID}&actors=${encodeURIComponent(movie.Actors)}&actresses=${encodeURIComponent(movie.Actors)}" target="_blank">Movie Details</a></p>
+            `;
+
+            colBody.appendChild(body);
+            row.appendChild(colBody);
+
+            card.appendChild(row);
+
+            return card;
+        }
+
+        function createYouTubeLink(title, year) {
+            const searchQuery = encodeURIComponent(`${title} ${year} trailer`);
+            return `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+
+        function createFYouTubeLink(title, year) {
+            const searchQuery = encodeURIComponent(`${title} ${year} full movie`);
+            return `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+    </script>
+</body>
+</html>

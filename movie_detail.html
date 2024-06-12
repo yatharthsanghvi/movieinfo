@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Details</title>
+    <!-- Add your CSS stylesheets here -->
+    <style>
+        body {
+            font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+            font-size: 20px;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+
+        .movie-details {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .movie-poster {
+            display: block; 
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .description {
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .details {
+            margin-bottom: 20px;
+        }
+
+        .details p {
+            margin: 10px 0;
+        }
+
+        .actors {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .actor-photo {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 10px;
+        }
+
+        .genres {
+            font-style: italic;
+            color: #777;
+        }
+
+        .trailer-link {
+            display: block;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .left {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="movie-details">
+        <h1 id="movie-title"></h1>
+        <img id="movie-poster" alt="Movie Poster" class="movie-poster">
+        <div id="movie-details-container" class="details">
+            <p><strong>Description:</strong></p><p id="movie-description" class="description"></p>
+            <p><strong>Year:</strong> <span id="movie-year"></span></p>
+            <p><strong>Rated:</strong> <span id="movie-rated"></span></p>
+            <p><strong>Released:</strong> <span id="movie-released"></span></p>
+            <p><strong>Runtime:</strong> <span id="movie-runtime"></span></p>
+            <p><strong>Genre:</strong> <span id="movie-genre"></span></p>
+            <p><strong>Director:</strong> <span id="movie-director"></span></p>
+            <p><strong>Writer:</strong> <span id="movie-writer"></span></p>
+            <p><strong>Actors & Actresses:</strong> <span id="movie-actors"></span></p>
+            <p><strong>Language:</strong> <span id="movie-language"></span></p>
+            <p><strong>Country:</strong> <span id="movie-country"></span></p>
+            <p><strong>Awards:</strong> <span id="movie-awards"></span></p>
+            <p><strong>Trailer:</strong> <u><a id="trailer-link" target="_blank">Watch Trailer</a></u></p>
+            <p><strong> Full Movie:</strong> <u><a id="full-movie-link" target="_blank">Watch Movie</a></u></p>
+        </div>
+    </div>
+
+    <!-- Add the IMDb ID input element -->
+    <input type="hidden" id="imdbID" name="imdbID">
+
+    <script>
+        // Extract IMDb ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const imdbID = urlParams.get('imdbID');
+        document.getElementById('imdbID').value = imdbID;
+
+        // Fetch movie details from OMDb API using IMDb ID
+        const apiKey = 'd196d57b'; // Replace with your actual API key
+        const apiUrl = `https://www.omdbapi.com/?apikey=${apiKey}&i=${imdbID}`;
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                // Populate movie details
+                document.getElementById('movie-title').textContent = data.Title;
+                document.getElementById('movie-description').textContent = data.Plot;
+                document.getElementById('movie-year').textContent = data.Year;
+                document.getElementById('movie-rated').textContent = data.Rated;
+                document.getElementById('movie-released').textContent = data.Released;
+                document.getElementById('movie-runtime').textContent = data.Runtime;
+                document.getElementById('movie-genre').textContent = data.Genre;
+                document.getElementById('movie-director').textContent = data.Director;
+                document.getElementById('movie-writer').textContent = data.Writer;
+                document.getElementById('movie-language').textContent = data.Language;
+                document.getElementById('movie-country').textContent = data.Country;
+                document.getElementById('movie-awards').textContent = data.Awards;
+                // Display actors and actresses
+                const actorsElement = document.getElementById('movie-actors');
+                const actressesElement = document.getElementById('movie-actresses');
+                // Split actors and actresses string into array and display
+                if (data.Actors) {
+                    const actors = data.Actors.split(',');
+                    actorsElement.textContent = actors.join(', ');
+                }
+                if (data.Actresses) {
+                    const actresses = data.Actresses.split(',');
+                    actressesElement.textContent = actresses.join(', ');
+                }
+                // Construct YouTube links
+                const youtubeLink = createYouTubeLink(data.Title, data.Year);
+                const fyoutubeLink = createFYouTubeLink(data.Title, data.Year);
+                // Set href attribute for trailer link
+                document.getElementById('trailer-link').href = youtubeLink;
+                // Set href attribute for full movie link
+                document.getElementById('full-movie-link').href = fyoutubeLink;
+                // Set background image
+                document.body.style.backgroundImage = `url('${data.Poster}')`;
+                document.getElementById('movie-poster').setAttribute('src', data.Poster);
+            })
+            .catch(error => {
+                console.error('Error fetching movie details:', error);
+                // Display an error message on the page if fetching fails
+                const movieDetailsContainer = document.getElementById('movie-details');
+                movieDetailsContainer.innerHTML = '<p>Error fetching movie details. Please try again later.</p>';
+            });
+
+        // Function to create YouTube link with movie title and year
+        function createYouTubeLink(title, year) {
+            const searchQuery = encodeURIComponent(`${title} ${year} trailer`);
+            return `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+
+        // Function to create YouTube link for full movie with movie title and year
+        function createFYouTubeLink(title, year) {
+            const searchQuery = encodeURIComponent(`${title} ${year} full movie`);
+            return `https://www.youtube.com/results?search_query=${searchQuery}`;
+        }
+    </script>
+</body>
+</html>
